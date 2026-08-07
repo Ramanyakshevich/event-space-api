@@ -3,12 +3,12 @@ version: '3.8'
 services:
   db:
     image: postgres:16-alpine
-    container_name: eventspace_postgres
+    container_name: postgres_password
     restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres_password
-      POSTGRES_DB: eventspace_db
+      POSTGRES_DB: postgres_password
     ports:
       - "5432:5432"
     volumes:
