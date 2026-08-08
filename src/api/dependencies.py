@@ -1,0 +1,54 @@
+from typing import AsyncGenerator, Annotated
+
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from core.database import AsyncSessionLocal
+from core.security import decode_jwt_token
+from models.user import User
+from services.user_service import UserService
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    async with AsyncSessionLocal() as session:
+        yield session
+
+DataBaseDep = Annotated[AsyncSessionLocal(), Depends(get_db)]
+
+async def get_user_service(db: DataBaseDep) -> UserService:
+    return UserService(db)
+
+UserServiceDep = Annotated[UserService, Depends(get_user_service)]
+
+async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: DataBaseDep) -> User:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Validation error",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    payload = decode_jwt_token(token)
+    if not payload or payload.get("type") != "access":
+        raise credentials_exception
+
+    user_id_str = payload.get("sub")
+    if user_id_str is None:
+        raise credentials_exception
+
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise credentials_exception
+
+    stmt = select(User).where(User.id == user_id)
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        raise credentials_exception
+
+    return user
+
+CurrentUserDep = Annotated[User, Depends(get_current_user)]
