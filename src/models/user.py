@@ -6,6 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models import Base, TimestampMixin
 if TYPE_CHECKING:
     from src.models.booking import Booking
+    from src.models.refresh_token import RefreshToken
 
 
 class UserRole(str, Enum):
@@ -20,5 +21,8 @@ class User(Base, TimestampMixin):
     role: Mapped[UserRole] = mapped_column(default=UserRole.USER, nullable=False)
 
     bookings: Mapped[List["Booking"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    refresh_token: Mapped[List["RefreshToken"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
