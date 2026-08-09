@@ -13,8 +13,8 @@ async def register(user_in: UserCreate, user_service: UserServiceDep):
     return await user_service.register(user_in)
 
 @router.post("/login", response_model=Token)
-async def login(from_data: Annotated[OAuth2PasswordRequestForm, Depends()], user_service: UserServiceDep):
-    user = await user_service.authenticate(email=from_data.username, password=from_data.password)
+async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], user_service: UserServiceDep):
+    user = await user_service.authenticate(email=form_data.username, password=form_data.password)
     return await user_service.create_tokens_for_user(user)
 
 @router.post("/refresh", response_model=Token)

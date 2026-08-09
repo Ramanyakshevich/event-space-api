@@ -7,7 +7,7 @@ from src.models import UserRole
 
 class UserCreate(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=10, description="Password must be at least 8 characters")
+    password: str = Field(min_length=8, description="Password must be at least 8 characters")
 
 class UserRead(BaseModel):
     id: int
