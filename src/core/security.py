@@ -6,7 +6,7 @@ from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
 from pwdlib.hashers.bcrypt import BcryptHasher
 
-from core.config import settings
+from src.core.config import settings
 
 password_hash = PasswordHash((Argon2Hasher(), BcryptHasher()))
 

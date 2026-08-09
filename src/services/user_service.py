@@ -3,7 +3,6 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
-from watchfiles import awatch
 
 from src.models.user import User, UserRole
 from src.models.refresh_token import RefreshToken
