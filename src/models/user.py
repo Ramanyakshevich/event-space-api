@@ -23,6 +23,6 @@ class User(Base, TimestampMixin):
     bookings: Mapped[List["Booking"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
-    refresh_token: Mapped[List["RefreshToken"]] = relationship(
+    refresh_tokens: Mapped[List["RefreshToken"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )

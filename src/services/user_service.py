@@ -3,7 +3,6 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
-from watchfiles import awatch
 
 from src.models.user import User, UserRole
 from src.models.refresh_token import RefreshToken
@@ -55,7 +54,7 @@ class UserService:
         refresh_token_str = create_refresh_token(subject=user.id)
 
         payload = decode_jwt_token(refresh_token_str)
-        expires_at = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
+        expires_at = datetime.fromtimestamp(payload["exp"])
 
         db_refresh_token = RefreshToken(
             token=refresh_token_str,

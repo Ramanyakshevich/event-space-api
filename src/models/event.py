@@ -18,6 +18,6 @@ class Event(Base, TimestampMixin):
     total_seats: Mapped[int] = mapped_column(Integer, nullable=False)
     available_seats: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    bookings: Mapped[List["Boking"]] = relationship(
+    bookings: Mapped[List["Booking"]] = relationship(
         back_populates="event", cascade="all, delete-orphan"
     )
