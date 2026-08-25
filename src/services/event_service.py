@@ -39,6 +39,9 @@ class EventService:
         event_data["available_seats"] = event_in.total_seats
 
         new_event = Event(**event_data)
+        self.db.add(new_event)
+
+        await self.db.flush()
         await self.db.commit()
         await self.db.refresh(new_event)
         return new_event
@@ -65,6 +68,6 @@ class EventService:
         return event
 
     async def delete(self, event_id: int) -> None:
-        event = self.get_by_id(event_id)
+        event = await self.get_by_id(event_id)
         await self.db.delete(event)
         await self.db.commit()

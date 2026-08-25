@@ -22,7 +22,7 @@ class EventBase(BaseModel):
         ...,
         description="Venue of the event"
     )
-    event_date: int = Field(
+    event_date: datetime = Field(
         ...,
         description="Date and time of the event"
     )
@@ -54,7 +54,7 @@ class EventUpdate(BaseModel):
 class EventRead(EventBase):
     id: int
     available_seats: int
-    created_ad: datetime
+    created_at: datetime
     updated_at: datetime
 
     model_config = {"from_attributes": True}

@@ -7,7 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import AsyncSessionLocal
 from src.core.security import decode_jwt_token
+from src.models import UserRole
 from src.models.user import User
+from src.services.event_service import EventService
 from src.services.user_service import UserService
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
@@ -52,3 +54,19 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Da
     return user
 
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
+
+async def get_event_service(db: DataBaseDep) -> EventService:
+    return EventService(db)
+
+EventServiceDep = Annotated[EventService, Depends(get_event_service)]
+
+async def get_current_admin(current_user: CurrentUserDep) -> User:
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator rights are required"
+        )
+    return current_user
+
+CurrentAdminDep = Annotated[User, Depends(get_current_admin)]
+
