@@ -1,18 +1,30 @@
-from typing import List
+from datetime import datetime
+from typing import List, Optional
 from fastapi import APIRouter, Query, status
 
 from src.api.dependencies import EventServiceDep, CurrentAdminDep
-from src.schemas.event import EventRead, EventCreate, EventUpdate
+from src.schemas.event import EventRead, EventCreate, EventUpdate, PaginatedResponse
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
-@router.get("", response_model=List[EventRead])
+@router.get("", response_model=PaginatedResponse[EventRead])
 async def get_events(
         event_service: EventServiceDep,
-        skip: int = Query(0, ge=1, description="Number of skipped records "),
-        limit: int = Query(20, ge=1, le=100, description="Returned records limit")
+        page: int = Query(1, ge=1, description="Number of page"),
+        size: int = Query(20, ge=1, le=100, description="Number of elements on page"),
+        search: Optional[str] = Query(None, description="Name of event/location search"),
+        date_from: Optional[datetime] = Query(None, description="Date from"),
+        date_to: Optional[datetime] = Query(None, description="Date to"),
+        only_available: bool = Query(False, description="Show only with available seats")
 ):
-    return await event_service.get_list(skip=skip, limit=limit)
+    return await event_service.get_list(
+        page=page,
+        size=size,
+        search=search,
+        date_from=date_from,
+        date_to=date_to,
+        only_available=only_available
+    )
 
 @router.get("/{event_id}", response_model=EventRead)
 async def get_event(event_id: int, event_service: EventServiceDep):

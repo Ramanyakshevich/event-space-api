@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TypeVar, Generic, List
 
 from pydantic import BaseModel, Field
 
@@ -56,5 +56,14 @@ class EventRead(EventBase):
     available_seats: int
     created_at: datetime
     updated_at: datetime
+
+T = TypeVar("T")
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    items: List[T]
+    total: int
+    page: int
+    size: int
+    pages: int
 
     model_config = {"from_attributes": True}

@@ -1,7 +1,9 @@
-from typing import Sequence
+import math
+from datetime import datetime
+from typing import Optional, Dict, Any
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models import Event
@@ -12,15 +14,53 @@ class EventService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_list(self, skip: int = 0, limit: int = 100) -> Sequence[Event]:
-        stmt = (
-            select(Event)
-            .offset(skip)
-            .limit(limit)
-            .order_by(Event.event_date.asc())
-        )
-        result = await self.db.execute(stmt)
-        return result.scalars().all()
+    async def get_list(
+            self,
+            page: int = 1,
+            size: int = 20,
+            search: Optional[str] = None,
+            date_from: Optional[datetime] = None,
+            date_to: Optional[datetime] = None,
+            only_available: bool = False
+    ) -> Dict[str, Any]:
+        query = select(Event)
+        count_query = select(func.count()).select_from(Event)
+
+        filters = []
+
+        if search:
+            search_filter = (
+                Event.title.ilike(f"%{search}%") | Event.location.ilike(f"%{search}%")
+            )
+            filters.append(search_filter)
+        if date_from:
+            filters.append(Event.event_date >= date_from)
+        if date_to:
+            filters.append(Event.event_date <= date_to)
+        if only_available:
+            filters.append(Event.available_seats > 0)
+        if filters:
+            query = query.where(*filters)
+            count_query = count_query.where(*filters)
+
+        total_result = await self.db.execute(count_query)
+        total = total_result.scalar_one()
+
+        offset = (page - 1) * size
+        query = query.order_by(Event.event_date.asc()).offset(offset).limit(size)
+
+        result = await self.db.execute(query)
+        items = result.scalars().all()
+
+        pages = math.ceil(total / size) if total > 0 else 1
+
+        return {
+            "items": items,
+            "total": total,
+            "page" : page,
+            "size": size,
+            "pages": pages
+        }
 
     async def get_by_id(self, event_id: int) -> Event:
         stmt = select(Event).where(Event.id == event_id)
