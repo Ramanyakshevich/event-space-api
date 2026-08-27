@@ -1,18 +1,41 @@
+import json
 import math
 from datetime import datetime
 from typing import Optional, Dict, Any
 
 from fastapi import HTTPException, status
+from redis.asyncio import Redis
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models import Event
-from src.schemas.event import EventCreate, EventUpdate
+from src.schemas.event import EventCreate, EventUpdate, EventRead
 
 
 class EventService:
-    def __init__(self, db: AsyncSession):
+    EVENT_CACHE_PREFIX = "event:list"
+    EVENT_CACHE_TTL = 300
+
+    def __init__(self, db: AsyncSession, redis: Optional[Redis] = None):
         self.db = db
+        self.redis = redis
+
+    def _generate_cache_key(self, **kwargs: Any) -> str:
+        params = {k: str(v) for k, v in sorted(kwargs.items()) if v is not None}
+        query_string = "&".join(f"{k}={v}" for k, v in params.items())
+        return f"{self.EVENT_CACHE_PREFIX}:{query_string}"
+
+    async def _invalidate_events_cache(self) -> None:
+        if not self.redis:
+            return
+        pattern = f"{self.EVENT_CACHE_PREFIX}:*"
+        cursor = 0
+        while True:
+            cursor, keys = await self.redis.scan(cursor=cursor, match=pattern, count=100)
+            if keys:
+                await self.redis.delete(*keys)
+            if cursor == 0:
+                break
 
     async def get_list(
             self,
@@ -23,9 +46,22 @@ class EventService:
             date_to: Optional[datetime] = None,
             only_available: bool = False
     ) -> Dict[str, Any]:
+        cache_key = self._generate_cache_key(
+            page=page,
+            size=size,
+            search=search,
+            date_from=date_from.isoformat() if date_from else None,
+            date_to=date_to.isoformat() if date_to else None,
+            only_available=only_available,
+        )
+
+        if self.redis:
+            cached_data = await self.redis.get(cache_key)
+            if cached_data:
+                return json.loads(cached_data)
+
         query = select(Event)
         count_query = select(func.count()).select_from(Event)
-
         filters = []
 
         if search:
@@ -54,13 +90,22 @@ class EventService:
 
         pages = math.ceil(total / size) if total > 0 else 1
 
-        return {
-            "items": items,
+        items_data = [EventRead.model_validate(item).model_dump(mode="json") for item in items]
+        response_payload = {
+            "items": items_data,
             "total": total,
             "page" : page,
             "size": size,
             "pages": pages
         }
+
+        if self.redis:
+            await self.redis.setex(
+                cache_key,
+                self.EVENT_CACHE_TTL,
+                json.dumps(response_payload),
+            )
+        return response_payload
 
     async def get_by_id(self, event_id: int) -> Event:
         stmt = select(Event).where(Event.id == event_id)
@@ -84,6 +129,7 @@ class EventService:
         await self.db.flush()
         await self.db.commit()
         await self.db.refresh(new_event)
+        await self._invalidate_events_cache()
         return new_event
 
     async def update(self, event_id: int, event_in: EventUpdate) -> Event:
@@ -105,9 +151,11 @@ class EventService:
 
         await self.db.commit()
         await self.db.refresh(event)
+        await self._invalidate_events_cache()
         return event
 
     async def delete(self, event_id: int) -> None:
         event = await self.get_by_id(event_id)
         await self.db.delete(event)
         await self.db.commit()
+        await self._invalidate_events_cache()

@@ -57,6 +57,8 @@ class EventRead(EventBase):
     created_at: datetime
     updated_at: datetime
 
+    model_config = {"from_attributes": True}
+
 T = TypeVar("T")
 
 class PaginatedResponse(BaseModel, Generic[T]):

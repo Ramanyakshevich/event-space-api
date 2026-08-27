@@ -58,8 +58,8 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Da
 
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
 
-async def get_event_service(db: DataBaseDep) -> EventService:
-    return EventService(db)
+async def get_event_service(db: DataBaseDep, redis:RedisDep) -> EventService:
+    return EventService(db, redis=redis)
 
 EventServiceDep = Annotated[EventService, Depends(get_event_service)]
 
