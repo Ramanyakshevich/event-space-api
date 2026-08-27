@@ -2,10 +2,12 @@ from typing import AsyncGenerator, Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import AsyncSessionLocal
+from src.core.redis import get_redis
 from src.core.security import decode_jwt_token
 from src.models import UserRole
 from src.models.user import User
@@ -13,6 +15,7 @@ from src.services.event_service import EventService
 from src.services.user_service import UserService
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
+RedisDep = Annotated[Redis, Depends(get_redis)]
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
