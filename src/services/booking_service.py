@@ -20,7 +20,7 @@ class BookingService:
     async def _invalidate_events_cache(self) -> None:
         if not self.redis:
             return
-        pattern = f"{self.EVENTS_CACHE_PREFIX}"
+        pattern = f"{self.EVENTS_CACHE_PREFIX}:*"
         cursor = 0
         while True:
             cursor, keys = await self.redis.scan(cursor=cursor, match=pattern, count=100)
@@ -31,7 +31,7 @@ class BookingService:
 
     async def create_booking(self, user_id: int, booking_in: BookingCreate) -> Booking:
         stmt = (
-            select(Event).where(Event.id == booking_in.event_id).with_for_update
+            select(Event).where(Event.id == booking_in.event_id).with_for_update()
         )
         result = await self.db.execute(stmt)
         event = result.scalar_one_or_none()
@@ -41,18 +41,18 @@ class BookingService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Event with id={booking_in.event_id} was not found"
             )
-        if event.available_seats < booking_in.seats_count:
+        if event.available_seats < booking_in.tickets_count:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No seats available"
             )
-        event.available_seats -= booking_in.seats_count
-        total_price = event.price * booking_in.seats_count
+        event.available_seats -= booking_in.tickets_count
+        total_price = event.price * booking_in.tickets_count
 
         booking = Booking(
             user_id=user_id,
             event_id=event.id,
-            seats_count=booking_in.seats_count,
+            tickets_count=booking_in.tickets_count,
             total_price=total_price,
             status=BookingStatus.CONFIRMED
         )
@@ -60,10 +60,15 @@ class BookingService:
 
         await self.db.flush()
         await self.db.commit()
-        await self.db.refresh(booking)
         await self._invalidate_events_cache()
 
-        return booking
+        final_stmt = (
+            select(Booking)
+            .where(Booking.id == booking.id)
+            .options(selectinload(Booking.event))
+        )
+        final_result = await self.db.execute(final_stmt)
+        return final_result.scalar_one()
 
     async def get_user_bookings(self, user_id: int) -> Sequence[Booking]:
         stmt = (
@@ -99,12 +104,17 @@ class BookingService:
         event = event_result.scalar_one_or_none()
 
         if event:
-            event.available_seats += booking.seats_count
+            event.available_seats += booking.tickets_count
 
         booking.status = BookingStatus.CANCELLED
 
         await self.db.commit()
-        await self.db.refresh(booking)
         await self._invalidate_events_cache()
 
-        return booking
+        final_stmt = (
+            select(Booking)
+            .where(Booking.id == booking.id)
+            .options(selectinload(Booking.event))
+        )
+        final_result = await self.db.execute(final_stmt)
+        return final_result.scalar_one()

@@ -17,10 +17,10 @@ class BookingBase(BaseModel):
         description="Event ID",
         examples=[1]
     )
-    seats_count: int = Field(
+    tickets_count: int = Field(
         ...,
         gt=0,
-        description="Number of booking seats (minimum 1)",
+        description="Number of tickets (minimum 1)",
         examples=[2]
     )
 

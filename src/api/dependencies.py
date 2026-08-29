@@ -11,6 +11,7 @@ from src.core.redis import get_redis
 from src.core.security import decode_jwt_token
 from src.models import UserRole
 from src.models.user import User
+from src.services.booking_service import BookingService
 from src.services.event_service import EventService
 from src.services.user_service import UserService
 
@@ -72,4 +73,10 @@ async def get_current_admin(current_user: CurrentUserDep) -> User:
     return current_user
 
 CurrentAdminDep = Annotated[User, Depends(get_current_admin)]
+
+async def get_booking_service(db: DataBaseDep, redis: RedisDep) -> BookingService:
+    return BookingService(db=db, redis=redis)
+
+BookingServiceDep = Annotated[BookingService, Depends(get_booking_service)]
+
 

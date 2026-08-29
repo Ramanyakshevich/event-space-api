@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 class BookingStatus(str, Enum):
     PENDING = "pending"
     CONFIRMED = "confirmed"
-    CANCELED = "canceled"
+    CANCELED = "cancelled"
 
 class Booking(Base, TimestampMixin):
     __tablename__ = "bookings"
@@ -23,6 +23,7 @@ class Booking(Base, TimestampMixin):
         ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True
     )
     tickets_count: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    total_price: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     status: Mapped[BookingStatus] = mapped_column(default=BookingStatus.PENDING, nullable=False)
 
     user: Mapped["User"] = relationship(back_populates="bookings")
