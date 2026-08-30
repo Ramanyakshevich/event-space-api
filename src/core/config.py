@@ -14,6 +14,15 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+
+    @property
+    def CELERY_BROKER_URL(self):
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/1"
+    @property
+    def CELERY_RESULT_BACKEND(self):
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/2"
 
     model_config = SettingsConfigDict(
         env_file=".env",
