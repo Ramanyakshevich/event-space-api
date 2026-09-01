@@ -6,8 +6,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.models import Booking, Event
+from src.models import Booking, Event, User
 from src.schemas.booking import BookingCreate, BookingStatus
+from src.tasks.email_tasks import send_booking_confirmation_email
 
 
 class BookingService:
@@ -29,7 +30,7 @@ class BookingService:
             if cursor == 0:
                 break
 
-    async def create_booking(self, user_id: int, booking_in: BookingCreate) -> Booking:
+    async def create_booking(self, user: User, booking_in: BookingCreate) -> Booking:
         stmt = (
             select(Event).where(Event.id == booking_in.event_id).with_for_update()
         )
@@ -50,7 +51,7 @@ class BookingService:
         total_price = event.price * booking_in.tickets_count
 
         booking = Booking(
-            user_id=user_id,
+            user_id=user.id,
             event_id=event.id,
             tickets_count=booking_in.tickets_count,
             total_price=total_price,
@@ -61,6 +62,14 @@ class BookingService:
         await self.db.flush()
         await self.db.commit()
         await self._invalidate_events_cache()
+
+        send_booking_confirmation_email.delay(
+            email=user.email,
+            booking_id=booking.id,
+            event_title=event.title,
+            tickets_count=booking.tickets_count,
+            total_price=booking.total_price
+        )
 
         final_stmt = (
             select(Booking)

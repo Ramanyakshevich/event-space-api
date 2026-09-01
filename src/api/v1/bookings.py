@@ -12,7 +12,7 @@ async def create_booking(
         booking_service: BookingServiceDep,
         current_user: CurrentUserDep
 ):
-    return await booking_service.create_booking(user_id=current_user.id, booking_in=booking_in)
+    return await booking_service.create_booking(user=current_user, booking_in=booking_in)
 
 @router.get("/my", response_model=List[BookingRead])
 async def get_my_bookings(
