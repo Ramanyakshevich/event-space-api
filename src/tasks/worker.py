@@ -6,7 +6,7 @@ celery_app = Celery(
     "event_space_tasks",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
-    include=["src.tasks.email_tasks"]
+    include=["src.tasks.email_tasks", "src.tasks.cleanup_tasks"]
 )
 
 celery_app.conf.update(
@@ -17,5 +17,11 @@ celery_app.conf.update(
     enable_utc=True,
     task_track_started=True,
     task_acks_late=True,
-    broker_connection_retry_on_startup=True
+    broker_connection_retry_on_startup=True,
+    beat_schedule={
+        "cancel-expired-bookings-every-minute": {
+            "task": "cancel_expired_bookings",
+            "schedule": 60.0
+        }
+    }
 )
