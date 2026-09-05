@@ -23,6 +23,50 @@ services:
     volumes:
       - redis_data:/data
 
+  app:
+    build: .
+    container_name: eventspace_api
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres_password@db:5432/postgres_password
+      - REDIS_HOST=redis
+    depends_on:
+      - db
+      - redis
+
+  celery_worker:
+      build: .
+      container_name: eventspace_celery_worker
+      restart: always
+      command: ["celery", "-A", "src.tasks.email_tasks", "worker", "--loglevel=info"]
+      env_file:
+        - .env
+      environment:
+        - DATABASE_URL=postgresql+asyncpg://postgres:postgres_password@db:5432/postgres_password
+        - REDIS_HOST=redis
+      depends_on:
+        - db
+        - redis
+        - app
+
+  celery_beat:
+    build: .
+    container_name: eventspace_celery_beat
+    restart: always
+    command: [ "celery", "-A", "src.tasks.email_tasks", "beat", "--loglevel=info" ]
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres_password@db:5432/postgres_password
+      - REDIS_HOST=redis
+    depends_on:
+      - db
+      - redis
+
 volumes:
   postgres_data:
   redis_data:

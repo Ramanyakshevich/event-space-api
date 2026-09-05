@@ -10,7 +10,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 
 RUN  uv venv /opt/venv && \
-     uv pip install --system=false --python=/opt/venv/bin/python -r pyproject.toml
+     uv pip install --python=/opt/venv/bin/python -r pyproject.toml
 
 FROM python:3.12-slim
 
